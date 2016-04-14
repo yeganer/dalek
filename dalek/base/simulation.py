@@ -4,8 +4,6 @@ import time
 import numpy as np
 import pandas as pd
 
-from astropy import units as u
-
 from tardis.simulation import Simulation
 
 logger = logging.getLogger(__name__)
@@ -94,6 +92,9 @@ class TinnerSimulation(Simulation):
         model.t_inner = t_inner
 
         model.t_rads = np.linspace(t_inner, 0.5 * t_inner, len(model.t_rads))
+
+# Update plasma after updating model.t_rads
+        model.plasma_array.update(t_rad=model.t_rads)
 
         while iterations_remaining > 1:
             logger.info('Remaining run %d', iterations_remaining)

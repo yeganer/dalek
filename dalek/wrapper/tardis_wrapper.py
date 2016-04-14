@@ -1,8 +1,3 @@
-
-# coding: utf-8
-
-# In[54]:
-
 import os
 import logging
 
@@ -16,6 +11,7 @@ from tardis.io.config_reader import Configuration, ConfigurationNameSpace
 
 from dalek.base.simulation import TinnerSimulation
 
+
 class TardisWrapper(object):
 
     def __init__(self, config_fname, atom_data=None, log_dir='./logs/'):
@@ -26,7 +22,6 @@ class TardisWrapper(object):
             self._atom_data = AtomData.from_hdf5(self._config.atom_data)
         else:
             self._atom_data = atom_data
-
 
     def __call__(self, callback, log_name=None):
         if log_name is None:
@@ -58,7 +53,6 @@ class TardisWrapper(object):
         run_radial1d(mdl)
         return mdl
 
-
     @property
     def atom_data(self):
         return deepcopy(self._atom_data)
@@ -70,11 +64,16 @@ class TardisWrapper(object):
 
 class TInnerWrapper(TardisWrapper):
 
+    def __init__(self, *args, **kwargs):
+        self._convergence_threshold = kwargs.pop('convergence_threshold', 0.05)
+        super(TInnerWrapper, self).__init__(*args, **kwargs)
+
     def run_tardis(self, config):
         mdl = Radial1DModel(config)
+# get t_inner from config. No need to use plasma.initial_t_inner
+# because config validation is already done
         t_inner = config.get_config_item('plasma.t_inner')
-        simulation = TinnerSimulation(config)
+        simulation = TinnerSimulation(config, self._convergence_threshold)
         simulation.run_simulation(mdl, t_inner)
         mdl.runner = simulation.runner
         return mdl
-
