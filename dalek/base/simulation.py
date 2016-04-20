@@ -6,7 +6,7 @@ import pandas as pd
 
 from tardis.simulation import Simulation
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('tardis.simulation')
 
 class TinnerSimulation(Simulation):
 
