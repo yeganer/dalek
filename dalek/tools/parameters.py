@@ -126,6 +126,7 @@ class ParameterContainer(object):
                     self._input_pars.append(arg)
                 elif isinstance(arg, DependentParameter):
                     self._dep_pars.append(arg)
+        self._raw_values = np.zeros(len(self._input_pars))
 
     @property
     def values(self):
@@ -134,6 +135,7 @@ class ParameterContainer(object):
     @values.setter
     def values(self, new):
         assert len(new) == len(self._input_pars)
+        self._raw_values = new
         for p, v in zip(self._input_pars, new):
             p.value = v
         for p in self._dep_pars:
@@ -152,6 +154,24 @@ class ParameterContainer(object):
         for p in self._parameters:
             yield p.path, p.value
 
-    @property
-    def dict(self):
+    def as_dict(self):
         return {p.path: p.value for p in self._parameters}
+
+    def as_full_dict(self):
+        full_dict = self.as_dict()
+        full_dict.update(
+                {'raw.' + p.path: v for  p, v in zip(
+                    self._input_pars, self._raw_values)}
+                )
+        return full_dict
+
+    # def idict(self, idict):
+    #     tdict = {}
+    #     for p, x in zip(self._input_pars, idict):
+    #         try:
+    #             tdict.update({p.path: p.transform(x)})
+    #         except ValueError:
+    #             tdict.update({p.path: np.nan})
+    #     for p in self._dep_pars:
+    #         tdict.update({p.path: p.update(self._parameters)})
+    #     return tdict
