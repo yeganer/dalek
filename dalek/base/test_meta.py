@@ -5,7 +5,10 @@ from uuid import uuid4
 import numpy as np
 import pandas as pd
 
+from copy import copy
+
 from dalek.base.meta import MetaContainer, MetaInformation
+
 
 class DummyRadial1D(object):
 
@@ -18,6 +21,7 @@ class DummyRadial1D(object):
         self.spectrum = Spectrum()
         self.spectrum_virtual = Spectrum()
 
+
 class DummyWrapper(object):
 
     def __init__(self):
@@ -27,6 +31,7 @@ class DummyWrapper(object):
         self.rank = 0
         self.fitness = 123
 
+
 class TestMetaContainer(object):
 
     @classmethod
@@ -34,6 +39,7 @@ class TestMetaContainer(object):
     def setup(self, request):
         self._file = tempfile.NamedTemporaryFile()
         self.container = MetaContainer(self._file.name)
+
         def fin():
             os.remove(self._file.name)
         request.addfinalizer(fin)
@@ -46,7 +52,7 @@ class TestMetaContainer(object):
 
         with self.container as store:
             print(store.filename)
-            assert np.all(tmp==store['s'].values)
+            assert np.all(tmp == store['s'].values)
             del store['s']
 
 
@@ -58,53 +64,74 @@ class TestMetaInformation(object):
         self._file = tempfile.NamedTemporaryFile()
         self.container = MetaContainer(self._file.name)
 
+        # def fin():
+        #     os.remove(self._file.name)
+        # request.addfinalizer(fin)
+
     @pytest.fixture(scope='class')
     def parameter_dict(self):
         return {
                 'o': 0.1,
-                'o_raw' : 0.01
+                'o_raw': 0.01
                 }
 
+    @pytest.fixture(scope='function')
+    def instance(self):
+        return MetaInformation(
+                np.random.randint(10),
+                np.random.randint(100),
+                np.random.random(),
+                uuid4(),
+                {})
 
     def test_init(self):
-        uuid = uuid4()
-        instance = MetaInformation(uuid, 0,1,2,{})
-        assert instance._rank == 0
-        assert instance._iteration == 1
-        assert instance._fitness == 2
-        assert instance._additional_data == {}
-        assert instance._uuid == uuid
-
+        uid = np.random.randint(10)
+        iteration = np.random.randint(100)
+        probability = np.random.random()
+        name = uuid4()
+        instance = MetaInformation(
+                uid=uid,
+                iteration=iteration,
+                probability=probability,
+                name=name,
+                info_dict={})
+        assert instance._uid == uid
+        assert instance._iteration == iteration
+        assert instance._probability == probability
+        assert instance._name == name
+        assert instance._info_dict == {}
+        instance2 = MetaInformation(
+                uid,
+                iteration,
+                probability,
+                name,
+                {})
+        assert instance2._uid == uid
+        assert instance2._iteration == iteration
+        assert instance2._probability == probability
+        assert instance2._name == name
+        assert instance2._info_dict == {}
 
     # @pytest.mark.skipif(True, reason='debug')
-    def test_save(self, parameter_dict):
-        wrapper = DummyWrapper()
-        message = MetaInformation.from_wrapper(wrapper, parameter_dict)
-        message.save(self.container)
+    def test_save(self, parameter_dict, instance):
+        instance._info_dict = parameter_dict
+        instance.save(self.container)
         with self.container as store:
-            diff = store['run_table'].loc[1,0] == message.details.loc[1,0]
-            assert diff.all()
-            #print(store)
-            #print(store.keys())
-            #print(store['run_table'])
-
+            assert np.all(
+                    store['run_table'].loc[instance.at] ==
+                    instance.details.loc[instance.at])
 
     # @pytest.mark.skipif(True, reason='debug')
-    def test_save_multiple(self, parameter_dict):
-        wrapper = DummyWrapper()
-        message = MetaInformation.from_wrapper(wrapper, parameter_dict)
-        message.save(self.container)
-        wrapper = DummyWrapper()
-        wrapper.iteration = 2
-        message2 = MetaInformation.from_wrapper(wrapper, parameter_dict)
-        message2.save(self.container)
+    def test_save_multiple(self, parameter_dict, instance):
+        instance._info_dict = parameter_dict
+        instance.save(self.container)
+        instance2 = copy(instance)
+        instance2._iteration = 1
+        instance2.save(self.container)
         with self.container as store:
-            diff = store['run_table'].loc[1,0] == message.details.loc[1,0]
-            diff2 = store['run_table'].loc[2,0] == message2.details.loc[2,0]
-            assert diff.all()
-            assert diff2.all()
-            #print(store.keys())
-            #print(store)
-            #print(store.keys())
-            #print(store['run_table'])
-
+            assert np.all(
+                    store['run_table'].loc[instance.at] ==
+                    instance.details.loc[instance.at])
+            assert np.all(
+                    store['run_table'].loc[instance2.at] ==
+                    instance2.details.loc[instance2.at])
