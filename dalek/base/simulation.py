@@ -115,8 +115,8 @@ class TinnerSimulation(Simulation):
             if converged:
                 break
 
-            self.log_plasma_state(model.t_rads, model.ws, np.nan,
-                                  estimated_t_rad, estimated_w, np.nan)
+            self.log_plasma_state(model.t_rads, model.ws, t_inner,
+                                  estimated_t_rad, estimated_w, t_inner)
             model.t_rads = model.t_rads + 0.5 * (estimated_t_rad - model.t_rads)
             model.ws = model.ws + 1.0 * (estimated_w - model.ws)
 
