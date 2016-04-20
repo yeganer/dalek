@@ -1,6 +1,9 @@
 import numpy as np
 import pytest
-from dalek.tools.base import Link, Chain, BreakChainException
+from dalek.tools.base import (
+        Link, Chain, BreakChainException,
+        DynamicInput, DynamicOutput
+        )
 
 
 class AppleTrue(Link):
@@ -58,8 +61,11 @@ class ApplePie(Link):
 class NumpyReturn(Link):
     outputs = ('array',)
 
+    def __init__(self, data):
+        self._data = data
+
     def calculate(self):
-        return np.arange(10)
+        return self._data
 
 
 @pytest.fixture
@@ -93,16 +99,16 @@ def test_chainable(apple, apple_t):
 
 
 def test_apple_true(apple):
-    assert apple({}) == {'apple': True}
+    assert apple() == {'apple': True}
 
 def test_apple_toggle(apple_t):
     result = apple_t({'apple': False})
     assert  result == {'apple': True}
     with pytest.raises(ValueError):
-        apple_t({})
+        apple_t()
 
 def test_multi_chain(apple, banana):
-    assert Chain(apple)({}) == apple({})
+    assert Chain(apple)() == apple({})
     chain = Chain(apple, banana)
     assert chain() == {'apple':True, 'banana':True}
 
@@ -123,8 +129,9 @@ def test_chain(apple, apple_t, banana, banana_t, cherry_a):
         'apple': True,
         'cherry': False,
         }
+    assert chain.inputs == set(['apple', 'banana'])
     with pytest.raises(ValueError):
-        chain({})
+        chain()
         chain({'banana':False})
         chain({'apple':False})
 
@@ -161,6 +168,37 @@ def test_applepie():
             'pie': False
             }
 
-def test_numpy():
-    nparray = NumpyReturn()
-    assert np.all(nparray()['array'] == np.arange(10))
+@pytest.fixture
+def data():
+    return np.random.random(100)
+
+def test_numpy(data):
+    nparray = NumpyReturn(data)
+    assert np.all(nparray()['array'] == data)
+
+def test_input(apple_t):
+    with pytest.raises(ValueError):
+        apple_t(True)
+
+def test_input_output(data):
+    dinput = DynamicInput('foo')
+    doutput = DynamicOutput('foo')
+    data_dict = {
+            'foo': data
+            }
+
+    assert np.all(dinput(data)['foo'] == data)
+    assert np.all(doutput(data_dict) == data)
+
+    assert np.all(Chain(dinput)(data)['foo'] == data)
+    assert np.all(Chain(doutput)(data_dict) == data)
+
+    iochain = Chain(dinput, doutput)
+    assert np.all(iochain(data) == data)
+
+def test_output_in_chain(apple, apple_t):
+    doutput = DynamicOutput('apple')
+
+    chain = Chain(apple, doutput, apple_t)
+    with pytest.raises(ValueError):
+        print(chain())

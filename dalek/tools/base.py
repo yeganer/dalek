@@ -9,24 +9,36 @@ class BreakChainException(Exception):
     pass
 
 class Chainable(object):
-    inputs = set()
-    outputs = set()
+    '''
+    The core of the Chain Framework.
+    This class verifies input before calling self._apply
+
+    If the Object only takes a single input it will be redirected directly.
+    '''
+    inputs = tuple()
+    outputs = tuple()
 
     def __call__(self, data={}):
         if self._isvalid(data):
             data = self._apply(copy(data))
         else:
-            raise ValueError("Inputs required are: {}\n Data provides only: {}".format(
-                str(self.inputs),
-                str(data)
-                ))
+            raise ValueError(
+                    "Inputs required are: {}\n Data provides only: {}".format(
+                        str(self.inputs),
+                        str(data)
+                        ))
         return data
 
     def _isvalid(self, data):
+        valid = False
         try:
-            valid = self.inputs.issubset(data.keys())
+            inputs = data.keys()
         except AttributeError:
-            valid = set(self.inputs).issubset(data.keys())
+            #pass
+            input_count = len(self.inputs)
+            valid = input_count == 1# and isinstance(self, DynamicInput)
+        else:
+            valid = set(self.inputs).issubset(inputs)
         finally:
             return valid
 
@@ -43,7 +55,10 @@ class Link(Chainable):
     def _prepare_input(self, input_dict):
         output = []
         for i in self.inputs:
-            output.append(input_dict[i])
+            try:
+                output.append(input_dict.get(i))
+            except AttributeError:
+                raise ValueError("Link requires a dictionary-like object as input.")
         return output
 
     def _prepare_output(self, output):
@@ -98,3 +113,30 @@ class Chain(Chainable):
         output_dict = dict.fromkeys(self.outputs)
         output_dict.update(input_dict)
         return output_dict
+
+
+class DynamicInput(Chainable):
+    '''
+    Transforms the input into the dictionary {name: input }
+    '''
+
+    def __init__(self, name):
+        self.outputs = (name,)
+        self.inputs = (name,)
+        self._name = name
+
+    def _apply(self, array):
+        return {self._name: array}
+
+
+class DynamicOutput(Chainable):
+    '''
+    This will return the value of `name`.
+    '''
+
+    def __init__(self, name):
+        self.inputs = (name,)
+        self._name = name
+
+    def _apply(self, input_dict):
+        return input_dict[self._name]
