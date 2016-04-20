@@ -17,5 +17,6 @@ def test_tardis(config_path, log_path):
                 'parameters': parameters
                 }
             )
-    print(output.keys())
+    assert output.has_key('model')
+    assert output.has_key('runtime')
 

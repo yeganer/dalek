@@ -3,6 +3,7 @@ import numpy as np
 from dalek.tools.base import Link
 from dalek.wrapper.tardis_wrapper import TardisWrapper
 from astropy import units as u
+import time
 
 class DummyException(Exception):
     pass
@@ -10,7 +11,7 @@ class DummyException(Exception):
 
 class Tardis(Link):
     inputs = ('parameters', 'uuid',)
-    outputs = ('model',)
+    outputs = ('model', 'runtime',)
 
     def __init__(self, wrapper):
         if not isinstance(wrapper, TardisWrapper):
@@ -27,14 +28,13 @@ class Tardis(Link):
                 config.set_config_item(k, v)
             return config
 
+        start = time.time()
         mdl = self._wrapper(apply_config, log_name=uuid)
-        return mdl
+        stop = time.time()
+        return mdl, (stop-start)
 
 
-class DummyTardis(Link):
-    inputs = ('parameters', 'uuid',)
-    outputs = ('model',)
-
+class DummyTardis(Tardis):
     def __init__(self, wrapper):
         if not isinstance(wrapper, TardisWrapper):
             raise ValueError(
@@ -69,4 +69,4 @@ class DummyTardis(Link):
                 mdl.runner, 'virt_packet_energies',
                 np.random.random(100000))
         setattr(mdl.runner, 'time_of_simulation', values['tos'])
-        return mdl
+        return mdl, (np.random.random() * 100)
