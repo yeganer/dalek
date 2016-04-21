@@ -48,10 +48,10 @@ class TestMetaContainer(object):
         tmp = pd.Series(np.arange(10))
         with self.container as store:
             store['s'] = tmp
-            print(store.filename)
+            #print(store.filename)
 
         with self.container as store:
-            print(store.filename)
+            #print(store.filename)
             assert np.all(tmp == store['s'].values)
             del store['s']
 
@@ -126,12 +126,39 @@ class TestMetaInformation(object):
         instance._info_dict = parameter_dict
         instance.save(self.container)
         instance2 = copy(instance)
-        instance2._iteration = 1
+        instance2._iteration += 1
         instance2.save(self.container)
         with self.container as store:
             assert np.all(
                     store['run_table'].loc[instance.at] ==
                     instance.details.loc[instance.at])
+            assert np.all(
+                    store['run_table'].loc[instance2.at] ==
+                    instance2.details.loc[instance2.at])
+
+    def test_incremental_save(self):
+        instance = MetaInformation(
+                uid=np.random.randint(10),
+                iteration=np.random.randint(100),
+                probability=np.nan,
+                name=uuid4(),
+                info_dict={
+                    'val1': 0.5,
+                    'val2': np.nan,
+                    })
+        instance.save(self.container)
+        instance._probability = np.random.random()
+        instance._info_dict['val2'] = np.random.random()*100
+        instance.save(self.container)
+        with self.container as store:
+            assert len(store['run_table'])==1
+            assert np.all(
+                    store['run_table'].loc[instance.at] ==
+                    instance.details.loc[instance.at])
+        instance2 = copy(instance)
+        instance2._iteration += 1
+        instance2.save(self.container)
+        with self.container as store:
             assert np.all(
                     store['run_table'].loc[instance2.at] ==
                     instance2.details.loc[instance2.at])

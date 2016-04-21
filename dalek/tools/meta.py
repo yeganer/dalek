@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 
 from dalek.tools.base import Link
@@ -34,3 +35,12 @@ class SaveRun(Link):
             except (AttributeError, KeyError):
                 pass
         metainfo.save(self._container)
+
+
+class SavePreRun(SaveRun):
+    inputs = ('uuid', 'rank', 'iteration', 'parameters')
+
+    def calculate(self, uuid, rank, iteration, parameters):
+        super(SavePreRun, self).calculate(
+                None, uuid, rank, iteration,
+                np.nan, np.nan, parameters)

@@ -117,12 +117,24 @@ Please choose another name.\n'''.format(name))
     def _save_data(self, store):
         warnings.simplefilter('ignore', tables.NaturalNameWarning)
         for d in self._data:
-            getattr(self, '_' + d).to_hdf(store, self.data_path(d))
+            try:
+                store[self.data_path(d)]
+            except KeyError:
+                getattr(self, '_' + d).to_hdf(store, self.data_path(d))
 
     def save(self, container):
         with container as store:
+            try:
+                if self.at in store[self._table_name].index:
+                    df = store[self._table_name]
+                    del store[self._table_name]
+                    df.loc[self.at] = self.details.loc[self.at]
+                else:
+                    df = self.details
+            except KeyError:
+                df = self.details
+            store.append(self._table_name, df)
             self._save_data(store)
-            store.append(self._table_name, self.details)
 
     @property
     def at(self):
