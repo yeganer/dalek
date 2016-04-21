@@ -1,5 +1,7 @@
 import os
+import time
 import logging
+import platform
 
 from uuid import uuid4
 from copy import deepcopy
@@ -27,6 +29,9 @@ class TardisWrapper(object):
         if log_name is None:
             log_name = uuid4()
         self.set_logger(log_name)
+        logger = logging.getLogger('tardis.wrapper')
+        logger.info("{:s}\nStarting Tardis on {:s}.\n".format(
+            time.ctime(),platform.node()))
         config = self._generate_config(callback)
         self.model = self.run_tardis(config)
         return self.model
