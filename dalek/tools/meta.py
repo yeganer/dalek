@@ -44,8 +44,15 @@ class SaveRun(Link):
 
 
 class SavePreRun(SaveRun):
-    inputs = ('uuid', 'rank', 'iteration', 'parameters', )
+    '''
+    Test missing!!!
+    '''
+    inputs = (
+            'uuid', 'rank', 'iteration', 'parameters',
+            'host', 'time')
 
-    def calculate(self, uuid, rank, iteration, parameters):
+    def calculate(
+            self, uuid, rank, iteration, parameters,
+            host, time):
         super(SavePreRun, self).calculate(
-                None, uuid, rank, iteration, parameters)
+                None, uuid, rank, iteration, parameters, host=host, time=time)
