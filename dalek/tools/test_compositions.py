@@ -39,4 +39,5 @@ def test_tardis(config_path, log_path, artisw, artisf):
                 'parameters': parameters
                 }
             )
-    print(output['flux'])
+    assert output.has_key('flux')
+    #print(output['flux'])
