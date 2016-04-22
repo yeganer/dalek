@@ -1,6 +1,8 @@
+import platform
 import numpy as np
 from uuid import uuid4
 from astropy import units as u
+from datetime import datetime as dt
 
 from dalek.tools.base import Link
 
@@ -60,7 +62,7 @@ class Flux(Link):
 
 class RunInfo(Link):
     inputs = tuple()
-    outputs = ('iteration', 'rank', 'uuid',)
+    outputs = ('iteration', 'rank', 'uuid', 'host', 'time')
 
     def __init__(self):
         self._iteration = 0
@@ -76,5 +78,27 @@ class RunInfo(Link):
         return (
                 self._iteration,
                 self._rank,
-                uuid4()
+                uuid4(),
+                platform.node(),
+                np.datetime64(dt.now()),
                 )
+
+
+class RunInfoFromFile(RunInfo):
+
+    def __init__(self, container):
+        super(RunInfoFromFile, self).__init__()
+        self._container = container
+
+    def calculate(self):
+        with self._container as store:
+            try:
+                df = store['run_table']
+                df = df.loc[df.index.get_level_values('uid')==self._rank]
+                iteration = df.index.get_level_values('iteration').max()
+            except (KeyError, IndexError):
+                pass
+            else:
+                if not np.isnan(iteration):
+                    self._iteration = iteration
+        return super(RunInfoFromFile, self).calculate()

@@ -6,20 +6,26 @@ from dalek.tools.base import Link
 from dalek.base.meta import MetaInformation
 
 class SaveRun(Link):
-    inputs = ('model', 'uuid', 'rank', 'iteration', 'posterior', 'runtime', 'parameters')
+    inputs = (
+            'model', 'uuid', 'rank', 'iteration', 'parameters',
+            'posterior', 'runtime', 'host', 'time')
     outputs = tuple()
 
     def __init__(self, container, add_data=[]):
         self._container = container
         self._add_data = add_data
 
-    def calculate(self, model, uuid, rank, iteration, posterior, runtime, parameters):
+    def calculate(
+            self, model, uuid, rank, iteration, parameters,
+            posterior=np.nan, runtime=np.nan, host=None, time=None):
         try:
             run_values = parameters.as_full_dict()
         except AttributeError:
             run_values = parameters
 
         run_values['runtime'] = runtime or 0.0
+        run_values['start_time'] = time or np.datetime64()
+        run_values['host'] = host or 'unknown'
 
         metainfo = MetaInformation(
                 uid=rank,
@@ -38,9 +44,8 @@ class SaveRun(Link):
 
 
 class SavePreRun(SaveRun):
-    inputs = ('uuid', 'rank', 'iteration', 'parameters')
+    inputs = ('uuid', 'rank', 'iteration', 'parameters', )
 
     def calculate(self, uuid, rank, iteration, parameters):
         super(SavePreRun, self).calculate(
-                None, uuid, rank, iteration,
-                np.nan, np.nan, parameters)
+                None, uuid, rank, iteration, parameters)
