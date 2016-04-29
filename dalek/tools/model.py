@@ -44,7 +44,6 @@ class DummyTardis(Tardis):
         self._wrapper = wrapper
 
     def calculate(self, parameters, uuid):
-
         values = {}
 
         def apply_config(config):

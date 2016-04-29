@@ -2,6 +2,7 @@ import os
 import time
 import logging
 import platform
+import numpy as np
 
 from uuid import uuid4
 from copy import deepcopy
@@ -16,8 +17,10 @@ from dalek.base.simulation import TinnerSimulation
 
 class TardisWrapper(object):
 
-    def __init__(self, config_fname, atom_data=None, log_dir='./logs/'):
-        self._log_dir = log_dir
+    def __init__(self, *args, **kwargs):
+        config_fname = args[0]
+        atom_data = kwargs.pop('atom_data', None)
+        self._log_dir = kwargs.pop('log_dir', './logs/')
         self.set_logger('startup')
         self._config = ConfigurationNameSpace.from_yaml(config_fname)
         if atom_data is None:
@@ -31,7 +34,7 @@ class TardisWrapper(object):
         self.set_logger(log_name)
         logger = logging.getLogger('tardis.wrapper')
         logger.info("{:s}\nStarting Tardis on {:s}.\n".format(
-            time.ctime(),platform.node()))
+            time.ctime(), platform.node()))
         config = self._generate_config(callback)
         self.model = self.run_tardis(config)
         return self.model
@@ -81,4 +84,28 @@ class TInnerWrapper(TardisWrapper):
         simulation = TinnerSimulation(config, self._convergence_threshold)
         simulation.run_simulation(mdl, t_inner)
         mdl.runner = simulation.runner
+        return mdl
+
+
+class DummyWrapper(TardisWrapper):
+
+    def _set_logger(self, filename):
+        tardis_logger = logging.getLogger('tardis')
+        tardis_logger.handlers = []
+
+    def run_tardis(self, config):
+        from tardis.montecarlo.base import MontecarloRunner
+
+        mdl = Radial1DModel(config)
+        mdl.runner = MontecarloRunner(
+                np.random.randint(0, 2**31),
+                config.spectrum.frequency)
+        nus, mus, energies = mdl.runner.packet_source.create_packets(
+                config.plasma.t_inner,
+                config.montecarlo.no_of_packets *
+                config.montecarlo.no_of_virtual_packets
+                )
+        mdl.runner.virt_packet_nus = nus.value
+        mdl.runner.virt_packet_energies = energies
+        mdl.runner.time_of_simulation = mdl.time_of_simulation
         return mdl
