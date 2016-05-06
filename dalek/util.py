@@ -31,3 +31,15 @@ def set_engines_cpu_affinity():
             p = psutil.Process(os.getpid())
             p.cpu_affinity(range(cpu_count()))
 
+
+def weighted_avg_and_std(values, weights):
+    """
+    Stolen from
+    http://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
+    Return the weighted average and standard deviation.
+
+    values, weights -- Numpy ndarrays with the same shape.
+    """
+    average = np.average(values, weights=weights)
+    variance = np.average((values-average)**2, weights=weights)
+    return (average, np.sqrt(variance))
