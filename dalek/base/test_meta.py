@@ -1,4 +1,5 @@
-import os
+# import os
+import time
 import pytest
 import tempfile
 from uuid import uuid4
@@ -7,7 +8,13 @@ import pandas as pd
 
 from copy import copy
 
-from dalek.base.meta import MetaContainer, MetaInformation
+from dalek.base.meta import MetaContainer, MetaInformation, MPIContainer
+
+
+try:
+    from mpi4py import MPI
+except ImportError:
+    MPI = None
 
 
 class DummyRadial1D(object):
@@ -40,20 +47,11 @@ class TestMetaContainer(object):
         self._file = tempfile.NamedTemporaryFile()
         self.container = MetaContainer(self._file.name)
 
-        def fin():
-            os.remove(self._file.name)
-        request.addfinalizer(fin)
-
-    def test_read_write(self):
+    def test_save(self):
         tmp = pd.Series(np.arange(10))
-        with self.container as store:
-            store['s'] = tmp
-            #print(store.filename)
-
-        with self.container as store:
-            #print(store.filename)
-            assert np.all(tmp == store['s'].values)
-            del store['s']
+        self.container.save(tmp, 'test')
+        with pd.HDFStore(self._file.name, 'r') as store:
+            assert np.all(tmp == store['test'].values)
 
 
 class TestMetaInformation(object):
@@ -71,8 +69,8 @@ class TestMetaInformation(object):
     @pytest.fixture(scope='class')
     def parameter_dict(self):
         return {
-                'o': 0.1,
-                'o_raw': 0.01
+                'model.abundances.o': 0.1,
+                'raw.model.abundances.o': 0.01
                 }
 
     @pytest.fixture(scope='function')
@@ -84,6 +82,7 @@ class TestMetaInformation(object):
                 uuid4(),
                 {})
 
+    # TODO: Write test with hypothesis
     def test_init(self):
         uid = np.random.randint(10)
         iteration = np.random.randint(100)
@@ -115,26 +114,26 @@ class TestMetaInformation(object):
     # @pytest.mark.skipif(True, reason='debug')
     def test_save(self, parameter_dict, instance):
         instance._info_dict = parameter_dict
-        instance.save(self.container)
-        with self.container as store:
+        self.container.save(instance, 'run_table')
+        with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance.at] ==
-                    instance.details.loc[instance.at])
+                    instance.df.loc[instance.at])
 
     # @pytest.mark.skipif(True, reason='debug')
     def test_save_multiple(self, parameter_dict, instance):
         instance._info_dict = parameter_dict
-        instance.save(self.container)
+        self.container.save(instance, 'run_table')
         instance2 = copy(instance)
         instance2._iteration += 1
-        instance2.save(self.container)
-        with self.container as store:
+        self.container.save(instance2, 'run_table')
+        with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance.at] ==
-                    instance.details.loc[instance.at])
+                    instance.df.loc[instance.at])
             assert np.all(
                     store['run_table'].loc[instance2.at] ==
-                    instance2.details.loc[instance2.at])
+                    instance2.df.loc[instance2.at])
 
     def test_incremental_save(self):
         instance = MetaInformation(
@@ -146,19 +145,66 @@ class TestMetaInformation(object):
                     'val1': 0.5,
                     'val2': np.nan,
                     })
-        instance.save(self.container)
+        self.container.save(instance, 'run_table')
         instance._probability = np.random.random()
         instance._info_dict['val2'] = np.random.random()*100
-        instance.save(self.container)
-        with self.container as store:
-            assert len(store['run_table'])==1
+        self.container.save(instance, 'run_table')
+        with pd.HDFStore(self._file.name, 'r') as store:
+            assert len(store['run_table']) == 1
             assert np.all(
                     store['run_table'].loc[instance.at] ==
-                    instance.details.loc[instance.at])
+                    instance.df.loc[instance.at])
         instance2 = copy(instance)
         instance2._iteration += 1
-        instance2.save(self.container)
-        with self.container as store:
+        self.container.save(instance2, 'run_table')
+        with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance2.at] ==
-                    instance2.details.loc[instance2.at])
+                    instance2.df.loc[instance2.at])
+
+
+@pytest.mark.skipif(
+        MPI == None or MPI.COMM_WORLD.size < 2,
+        reason="No MPI support found")
+def test_mpi_container():
+    """
+    Run MPI test.
+    """
+    comm = MPI.COMM_WORLD.Dup()
+    rank = comm.rank
+    f = tempfile.NamedTemporaryFile()
+    mpi_container = MPIContainer(f.name, comm=comm)
+
+    np.random.seed(12345)
+    meta_info = [MetaInformation(
+            uid=np.random.randint(10),
+            iteration=np.random.randint(100),
+            probability=np.random.random(),
+            name='abc{}abc'.format(np.random.randint(10)),
+            info_dict={
+                'val1': 0.5,
+                'val2': np.random.random(),
+                }) for _ in range(comm.size)]
+    for m in meta_info:
+        m.add_data(pd.Series(np.arange(10)), 'foo')
+
+    if rank == 0:
+        mpi_container.receive()
+        time.sleep(2)
+        mpi_container.stop()
+        mpi_container.join()
+        with pd.HDFStore(f.name, 'r') as store:
+            for m in meta_info[1:]:
+                assert np.all(
+                        store['test'].loc[m.at] ==
+                        m.df.loc[m.at])
+                assert np.all(
+                        store[m.data_path('foo')] ==
+                        m._foo)
+
+    if rank > 0:
+        print('sending data...')
+        mpi_container.save(meta_info[rank], 'test')
+        with pytest.raises(IOError):
+            with pd.HDFStore(f.name, 'r') as store:
+                    store['test']

@@ -85,6 +85,9 @@ class RunInfo(Link):
 
 
 class RunInfoFromFile(RunInfo):
+    """
+    Not yet modified to reflect new MetaContainer
+    """
 
     def __init__(self, container):
         super(RunInfoFromFile, self).__init__()

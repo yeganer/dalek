@@ -11,8 +11,9 @@ class SaveRun(Link):
             'posterior', 'runtime', 'host', 'time')
     outputs = tuple()
 
-    def __init__(self, container, add_data=[]):
+    def __init__(self, container, add_data=[], table_name='run_table'):
         self._container = container
+        self._table_name = table_name
         self._add_data = add_data
 
     def calculate(
@@ -33,14 +34,14 @@ class SaveRun(Link):
                 probability=posterior,
                 name=uuid,
                 info_dict=run_values,
-                table_name='run_table',
                 )
         for name in self._add_data:
             try:
-                metainfo.add_data(name, pd.Series( getattr(model, name)))
+                metainfo.add_data(pd.Series(getattr(model, name)), name)
             except (AttributeError, KeyError):
+                # TODO: proper error handling here
                 pass
-        metainfo.save(self._container)
+        self._container.save(metainfo, self._table_name)
 
 
 class SavePreRun(SaveRun):
