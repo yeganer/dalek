@@ -48,23 +48,31 @@ class MetaContainer(object):
     """
     def __init__(self, path, summary_data=None, comm=None):
         self._path, self._file = os.path.split(path)
+        self._store = None
         if summary_data is not None:
             self._write_summary(summary_data)
+
+    @property
+    def store(self):
+        if self._store is None:
+            self._store = SafeHDFStore(os.path.join(self._path, self._file))
+        return self._store
+
+    def close(self):
+        self._store.close()
+        self._store = None
 
     def _write_summary(self, data):
         '''
         Write summary_data to .h5 file.
         '''
-        # TODO: proper dictionary to pd.Series parsing
-        with SafeHDFStore(os.path.join(self._path, self._file)) as store:
-            if 'overview' not in store.keys():
-                pd.Series(
-                        data.values(), index=data.keys()
-                        ).to_hdf(store, 'overview')
+        if 'overview' not in self.store.keys():
+            pd.Series(
+                    data.values(), index=data.keys()
+                    ).to_hdf(self.store, 'overview')
 
     def save(self, item, path):
-        with SafeHDFStore(os.path.join(self._path, self._file)) as store:
-            item.to_hdf(store, path)
+        item.to_hdf(self.store, path)
 
 
 class MPIContainer(object):
@@ -99,6 +107,7 @@ class MPIContainer(object):
 
     def receive(self):
         assert self.is_master()
+
         # Define function that will run in a seperate thread
         def f():
             while True:
@@ -122,6 +131,7 @@ class MPIContainer(object):
                         self.status.source == 0):
                     if self.debug:
                         print("receive: end signal. stopping")
+                    self.container.close()
                     break
 
                 # Save the data
@@ -154,6 +164,7 @@ class MPIContainer(object):
 
         self.join()
         self._p = None
+
 
 class MetaInformation(object):
     '''

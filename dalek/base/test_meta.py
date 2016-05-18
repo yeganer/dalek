@@ -50,6 +50,7 @@ class TestMetaContainer(object):
     def test_save(self):
         tmp = pd.Series(np.arange(10))
         self.container.save(tmp, 'test')
+        self.container.close()
         with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(tmp == store['test'].values)
 
@@ -115,6 +116,7 @@ class TestMetaInformation(object):
     def test_save(self, parameter_dict, instance):
         instance._info_dict = parameter_dict
         self.container.save(instance, 'run_table')
+        self.container.close()
         with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance.at] ==
@@ -124,9 +126,11 @@ class TestMetaInformation(object):
     def test_save_multiple(self, parameter_dict, instance):
         instance._info_dict = parameter_dict
         self.container.save(instance, 'run_table')
+        self.container.close()
         instance2 = copy(instance)
         instance2._iteration += 1
         self.container.save(instance2, 'run_table')
+        self.container.close()
         with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance.at] ==
@@ -149,6 +153,7 @@ class TestMetaInformation(object):
         instance._probability = np.random.random()
         instance._info_dict['val2'] = np.random.random()*100
         self.container.save(instance, 'run_table')
+        self.container.close()
         with pd.HDFStore(self._file.name, 'r') as store:
             assert len(store['run_table']) == 1
             assert np.all(
@@ -157,6 +162,7 @@ class TestMetaInformation(object):
         instance2 = copy(instance)
         instance2._iteration += 1
         self.container.save(instance2, 'run_table')
+        self.container.close()
         with pd.HDFStore(self._file.name, 'r') as store:
             assert np.all(
                     store['run_table'].loc[instance2.at] ==

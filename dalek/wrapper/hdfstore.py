@@ -9,14 +9,15 @@ logger = logging.getLogger(__name__)
 
 
 class SafeHDFStore(HDFStore):
-    def __init__(self, *args, **kwargs):
+    def open(self, *args, **kwargs):
         probe_interval = kwargs.pop("probe_interval", 0.1)
-        self._lock = "%s.lock" % args[0]
+        self._lock = "%s.lock" % self._path
         while True:
             try:
-                self._flock = os.open(self._lock, os.O_CREAT |
-                                                  os.O_EXCL |
-                                                  os.O_WRONLY)
+                self._flock = os.open(
+                        self._lock, os.O_CREAT |
+                        os.O_EXCL |
+                        os.O_WRONLY)
                 break
             except OSError as e:
                 if e.errno == errno.EEXIST:
@@ -24,10 +25,10 @@ class SafeHDFStore(HDFStore):
                 else:
                     raise e
 
-        HDFStore.__init__(self, *args, **kwargs)
+        super(SafeHDFStore, self).open(*args, **kwargs)
 
-    def __exit__(self, *args, **kwargs):
-        logger.debug('Exit SafeHDFStore')
-        HDFStore.__exit__(self, *args, **kwargs)
+    def close(self):
+        logger.debug('Close SafeHDFStore')
+        super(SafeHDFStore, self).close()
         os.close(self._flock)
         os.remove(self._lock)
