@@ -8,17 +8,18 @@ from dalek.base.meta import MetaInformation
 class SaveRun(Link):
     inputs = (
             'model', 'uuid', 'rank', 'iteration', 'parameters',
-            'posterior', 'runtime', 'host', 'time')
+            'posterior', 'flux', 'runtime', 'host', 'time')
     outputs = tuple()
 
-    def __init__(self, container, add_data=[], table_name='run_table'):
+    def __init__(self, container, add_data=[], table_name='run_table', flux=True):
         self._container = container
         self._table_name = table_name
         self._add_data = add_data
+        self._flux = True
 
     def calculate(
             self, model, uuid, rank, iteration, parameters,
-            posterior=np.nan, runtime=np.nan, host=None, time=None):
+            posterior=np.nan, flux=np.nan, runtime=np.nan, host=None, time=None):
         try:
             run_values = parameters.as_full_dict()
         except AttributeError:
@@ -35,6 +36,8 @@ class SaveRun(Link):
                 name=uuid,
                 info_dict=run_values,
                 )
+        if self._flux and not np.any(np.isnan(flux)):
+            metainfo.add_data(pd.Series(flux), 'flux')
         for name in self._add_data:
             try:
                 metainfo.add_data(pd.Series(getattr(model, name)), name)

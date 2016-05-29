@@ -82,7 +82,10 @@ class MPIContainer(object):
         self.comm = MPI.COMM_WORLD.Dup() if comm is None else comm
         self.debug = kwargs.pop('debug', False)
         self.status = MPI.Status()
-        self.container = MetaContainer(*args, **kwargs)
+        if self.is_master():
+            self.container = MetaContainer(*args, **kwargs)
+        else:
+            self.container = None
         self._p = None
 
     def is_master(self):
