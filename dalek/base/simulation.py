@@ -91,7 +91,7 @@ class TinnerSimulation(Simulation):
 
         model.t_inner = t_inner
 
-        model.t_rads = np.linspace(t_inner, 0.5 * t_inner, len(model.t_rads))
+        model.t_rads = np.linspace(t_inner.value, 0.5 * t_inner.value, len(model.t_rads)) * t_inner.unit
 
 # Update plasma after updating model.t_rads
         model.plasma_array.update(t_rad=model.t_rads)
