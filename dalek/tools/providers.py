@@ -37,16 +37,21 @@ class Luminosity(Link):
     def __init__(self, wl):
         self._wl_bins = wl
 
-    def calculate(self, nu, energy):
+    def calculate(self, packet_nu, packet_energy):
         return (np.histogram(
-            nu.to(u.angstrom, u.spectral()),
-            weights=energy,
-            bins=self._wl_bins)[0] * energy.unit  / np.diff(self._wl_bins)
+            packet_nu.to(u.angstrom, u.spectral()),
+            weights=packet_energy,
+            bins=self._wl_bins)[0] * packet_energy.unit  / np.diff(self._wl_bins)
             )
 
 
 class VirtualLuminosity(Luminosity):
     inputs = ('virtual_packet_nu', 'virtual_packet_energy',)
+
+    def calculate(self, virtual_packet_nu, virtual_packet_energy):
+        return super(
+                VirtualLuminosity, self).calculate(
+                        virtual_packet_nu, virtual_packet_energy)
 
 
 class Flux(Link):
@@ -56,8 +61,8 @@ class Flux(Link):
     def __init__(self, distance=(1 * u.Mpc)):
         self._distance = distance.to('cm')
 
-    def calculate(self, lum):
-        return lum / (4 * np.pi * self._distance**2)
+    def calculate(self, luminosity):
+        return luminosity / (4 * np.pi * self._distance**2)
 
 
 class RunInfo(Link):

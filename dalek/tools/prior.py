@@ -43,9 +43,9 @@ class CheckPrior(Link):
     '''
     inputs = ('logprior',)
 
-    def calculate(self, prior):
-        if prior == INVALID:
+    def calculate(self, logprior):
+        if logprior == INVALID:
             raise BreakChainException(
-                    'Prior is INVALID: {}'.format(prior))
+                    'Prior is INVALID: {}'.format(logprior))
 
 

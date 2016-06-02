@@ -5,11 +5,11 @@ class Posterior(Link):
     inputs = ('logprior', 'loglikelihood',)
     outputs = ('posterior',)
 
-    def calculate(self, prior, likelihood):
+    def calculate(self, logprior, loglikelihood):
         try:
-            return prior + likelihood.value
+            return logprior + loglikelihood.value
         except (TypeError, AttributeError) as e:
-            if likelihood is None:
-                return prior
+            if loglikelihood is None:
+                return logprior
             else:
                 raise e
