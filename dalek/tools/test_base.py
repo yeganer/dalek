@@ -231,3 +231,28 @@ def test_none(apple):
     none = NoneReturn()
 
     Chain(apple, none)()
+
+
+def multi_input(apple_t, banana_t, cherry_a):
+    chain = Chain(apple_t, banana_t)
+
+    assert chain(True, False) == {
+            'apple': False,
+            'pie': True,
+            }
+    assert cherry_a(True, True)['cherry']
+
+    class MultiInputNumpy(Link):
+        inputs = ('data1', 'data2',)
+        outputs = ('data',)
+
+        def calculate(self, data1, data2):
+            x1 = np.atleast_1d(data1)
+            x2 = np.atleast_1d(data1)
+            return np.logical_and(x1, x2)
+
+    multi = MultiInputNumpy()
+    assert np.all(multi(np.ones(10), np.ones(10))['data'])
+    assert Chain(multi)(
+            np.all(multi(np.ones(10), np.ones(10))['data'])
+            )
