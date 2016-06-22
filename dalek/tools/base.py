@@ -104,7 +104,7 @@ class Chain(Link):
     def _apply(self, args, kwargs):
         for link in self._links:
             try:
-                kwargs = link([], **kwargs)
+                args, kwargs = link.full([], **kwargs)
             except BreakChainException as e:
                 if self.breakable:
                     kwargs = self.cleanup(**kwargs)
