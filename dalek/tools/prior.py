@@ -1,6 +1,6 @@
 import numpy as np
 
-from astropy import constants as c
+from astropy import constants as c, units as u
 from dalek.tools.base import Link, BreakChainException, Chain
 
 INVALID = -np.inf
@@ -83,6 +83,9 @@ class LuminosityPrior(ParameterValuePrior):
 
     def __init__(self, luminosity_requested, time_explosion):
         def check_luminosity(tinner, vinner):
+            #WARNING: Hardcoded quantities
+            tinner = u.Quantity(tinner, 'K')
+            vinner = u.Quantity(vinner, 'km/s').cgs
             luminosity = (
                     4 * np.pi * c.sigma_sb.cgs *
                     (vinner * time_explosion) ** 2 *
