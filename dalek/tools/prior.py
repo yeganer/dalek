@@ -1,9 +1,11 @@
 import numpy as np
 
-from dalek.tools.base import Link, BreakChainException
+from astropy import constants as c
+from dalek.tools.base import Link, BreakChainException, Chain
 
 INVALID = -np.inf
 DEFAULT = 0.0
+
 
 class Prior(Link):
     '''
@@ -11,27 +13,88 @@ class Prior(Link):
     '''
     inputs = ('parameters',)
     outputs = ('logprior',)
+    first = True
 
-    def calculate(self, parameters):
-        for p,v in parameters.items():
-            if np.isnan(v):
-                return INVALID
-        try:
-            o = parameters['model.abundances.o']
-        except KeyError:
-            pass
-        else:
-            if o <= 0.:
-                return INVALID
-        try:
-            s = parameters['model.abundances.s']
-            si = parameters['model.abundances.si']
-        except KeyError:
-            pass
-        else:
-            if s > si:
-                return INVALID
+    def __init__(self):
+        self.inputs = Prior.inputs
+        if self.first:
+            Prior.first = False
+            Prior.inputs = ('parameters', 'logprior',)
+
+    def calculate(self, parameters, logprior=DEFAULT):
+        return self.logprior(parameters) + logprior
+
+    def logprior(self, parameters):
         return DEFAULT
+
+    @classmethod
+    def reset(cls):
+        cls.first = True
+        cls.inputs = ('parameters',)
+
+
+class DefaultPrior(Chain):
+
+    def __init__(self):
+        super(DefaultPrior, self).__init__(
+                ParameterValidPrior(),
+                ParameterValuePrior(
+                    ['model.abundances.si',
+                        'model.abundances.s'],
+                    lambda si, s: si > s),
+                ParameterValuePrior(
+                    ['model.abundances.o'],
+                    lambda o: 1 >= o >= 0),
+                )
+
+
+class ParameterValidPrior(Prior):
+
+    def logprior(self, parameters):
+        try:
+            values = parameters.values()
+        except TypeError:  # Dict object has .values()
+            values = parameters.values
+        if np.any(np.isnan(np.array(values))):
+            return INVALID
+        else:
+            return DEFAULT
+
+
+class ParameterValuePrior(Prior):
+
+    def __init__(self, names, function):
+        super(ParameterValuePrior, self).__init__()
+        self._names = names
+        self._fvalid = function
+
+    def logprior(self, parameters):
+        args = []
+        for name in self._names:
+            args.append(parameters[name])
+
+        if self._fvalid(*args):
+            return DEFAULT
+        else:
+            return INVALID
+
+
+class LuminosityPrior(ParameterValuePrior):
+
+    def __init__(self, luminosity_requested, time_explosion):
+        def check_luminosity(tinner, vinner):
+            luminosity = (
+                    4 * np.pi * c.sigma_sb.cgs *
+                    (vinner * time_explosion) ** 2 *
+                    tinner ** 4).to('erg/s')
+            return luminosity > luminosity_requested
+
+        super(LuminosityPrior, self).__init__(
+                names=[
+                    'plasma.initial_t_inner',
+                    'model.structure.velocity.item0'],
+                function=check_luminosity
+                )
 
 
 class CheckPrior(Link):
@@ -47,5 +110,3 @@ class CheckPrior(Link):
         if logprior == INVALID:
             raise BreakChainException(
                     'Prior is INVALID: {}'.format(logprior))
-
-
