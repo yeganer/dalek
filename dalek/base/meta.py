@@ -46,7 +46,7 @@ class MetaContainer(object):
             number of ranks, iterations
 
     """
-    def __init__(self, path, summary_data=None, comm=None):
+    def __init__(self, path, summary_data=None):
         self._path, self._file = os.path.split(path)
         self._store = None
         if summary_data is not None:
