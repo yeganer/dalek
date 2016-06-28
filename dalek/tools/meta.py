@@ -14,11 +14,11 @@ class SaveRun(Link):
 
     def __init__(
             self, container, add_data=[],
-            table_name='run_table', flux=True):
+            table_name='run_table', flux=False):
         self._container = container
         self._table_name = table_name
         self._add_data = add_data
-        self._flux = True
+        self._flux = flux
 
     def calculate(
             self, model, uuid, rank, iteration, parameters,
@@ -40,7 +40,7 @@ class SaveRun(Link):
                 name=uuid,
                 info_dict=run_values,
                 )
-        if self._flux and not np.any(np.isnan(flux)):
+        if self._flux and flux and not np.any(np.isnan(flux)):
             metainfo.add_data(pd.Series(flux), 'flux')
         for name in self._add_data:
             obj = model
