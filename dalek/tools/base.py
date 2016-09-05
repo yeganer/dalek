@@ -41,7 +41,8 @@ class Chainable(object):
                         {k:v for k,v in zip(self.inputs, args)})
             else:
                 raise TypeError(
-                        "expected {} arguments, got {} \n{}\n{}".format(
+                        "{} expected {} arguments, got {} \n{}\n{}".format(
+                            str(self.__class__.__name__),
                             len(self.inputs),
                             len(args),
                             self.inputs,
@@ -51,7 +52,8 @@ class Chainable(object):
             args = [kwargs[k] for k in self.inputs]
         except KeyError:
                 raise KeyError(
-                        "expected {} as input, got {}".format(
+                        "{} expected {} as input, got {}".format(
+                            str(self.__class__.__name__),
                             str(self.inputs),
                             str(kwargs.keys())
                             ))
