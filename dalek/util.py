@@ -3,11 +3,13 @@ import numpy as np
 from astropy import units as u, constants as const
 # Some helper functions
 
+
 def intensity_black_body_wavelength(wavelength, T):
     wavelength = u.Quantity(wavelength, u.angstrom)
     T = u.Quantity(T, u.K)
     f = ((8 * np.pi * const.h * const.c) / wavelength**5)
     return f / (np.exp((const.h * const.c)/(wavelength * const.k_B * T)) - 1)
+
 
 def bin_center_to_edge(bin_center):
     hdiff = 0.5 * np.diff(bin_center)
@@ -16,8 +18,17 @@ def bin_center_to_edge(bin_center):
         bin_center[0],
         bin_center)) + hdiff
 
+
 def bin_edge_to_center(bin_edge):
-    return 0.5 * (bin_edge[:-1] + bin_edge[1:] )
+    return 0.5 * (bin_edge[:-1] + bin_edge[1:])
+
+
+def flux_to_luminosity(flux, distance):
+    try:
+        return 4 * np.pi * distance.to('cm')**2 * flux
+    except AttributeError:
+        return 4 * np.pi * u.Quantity(distance, 'Mpc').to('cm')**2 * flux
+
 
 def set_engines_cpu_affinity():
     import sys
@@ -45,7 +56,6 @@ def weighted_avg_and_std(values, weights):
     return (average, np.sqrt(variance))
 
 #stolen from https://bitbucket.org/astro_ufsc/pystarlight/src/20c5b3444bbed9ace92e32162bfd816b2e75da3b/src/pystarlight/util/StarlightUtils.py?at=default#cl-93
-
 def ReSamplingMatrixNonUniform(lorig, lresam, extrap = False):
     '''
     Compute resampling matrix R_o2r, useful to convert a spectrum sampled at

@@ -13,8 +13,10 @@ class SaveRun(Link):
     outputs = tuple()
 
     def __init__(
-            self, container, add_data=[],
+            self, container=None, add_data=[],
             table_name='run_table', flux=False):
+        if container is None:
+            self.calculate = lambda *args, **kwargs: None
         self._container = container
         self._table_name = table_name
         self._add_data = add_data
