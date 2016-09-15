@@ -1,6 +1,14 @@
 import numpy as np
 
 
+def log_transform(x, a, b):
+    return b ** x * a ** (1 - x)
+
+
+def linear_transform(x, a, b):
+    return a + x * (b - a)
+
+
 class Parameter(object):
     """
     A static Parameter whose value can't be changed.
@@ -41,7 +49,7 @@ class DynamicParameter(Parameter):
     """
 
     def __init__(self, *args, **kwargs):
-        self._ftransform = kwargs.pop('transformation', lambda x, a, b : a + x * (b-a))
+        self._ftransform = kwargs.pop('transformation', linear_transform)
         self._bounds = kwargs.pop('bounds', (0,1))
         super(DynamicParameter, self).__init__(*args, **kwargs)
 

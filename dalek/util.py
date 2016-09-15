@@ -30,6 +30,15 @@ def flux_to_luminosity(flux, distance):
         return 4 * np.pi * u.Quantity(distance, 'Mpc').to('cm')**2 * flux
 
 
+def slice_spectrum(wl, spectrum, start, end):
+    _slice = slice(
+            wl.searchsorted(start),
+            wl.searchsorted(end) + 1
+            )
+    return spectrum[_slice]
+
+
+
 def set_engines_cpu_affinity():
     import sys
     if sys.platform.startswith('linux'):
